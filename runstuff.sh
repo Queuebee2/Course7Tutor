@@ -7,7 +7,7 @@ bowtie2-build "SD.fa" SD &&
 printf "Indexes successfully made\n" &&
 printf "Creating a sequence alignment map with bowtie2  \n" &&
 bowtie2 --phred64 --very-fast --no-unal -x SD -1 SD_3_1_400bp.fq -2 SD_3_2_400bp.fq -S Docc.sam &&
-printf "successfully ran bowti2\n" &&
+printf "successfully ran bowti2\n" || printf "Bowtie2 failed. if the error is something something 134 then thats intended\n" &&
 printf "creating view with samtools\n" &&
 samtools view -b -o Docc.sort.bam -S Docc.sam &&
 printf "successfully created view with samtools\n" &&

@@ -1,6 +1,10 @@
 # Course7Tutor
 
-### Plan
+### Plan (so far)
+- create 'indices' from reference genome with `bowtie2-build`
+- create alignment map with `bowtie2` from read date with the indices (creates SAM file)
+- use samtools to convert the SAM to a BAM file.
+- use samtools to sort, index and 'depth'. 
 
 # Installing tools
 

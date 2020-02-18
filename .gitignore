@@ -1,6 +1,7 @@
 igv/*
 bowtie2/*
 samtools/*
+IGV_2.8.0/*
 SD.fa
 SD_3_2_400bp.fq
 SD_3_1_400bp.fq

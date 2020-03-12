@@ -24,7 +24,12 @@ import argparse
 from argparse import RawTextHelpFormatter
 
 from Bio.Blast.NCBIWWW import qblast as BLAST
+from Bio.Blast.NCBIXML import parse as parseXML
 from Bio import Entrez
+
+
+DEFAULT_BLAST_OUTPUTNAME = "blast_output.xml"
+
 parser = argparse.ArgumentParser(description=f"This is the helpsection of {__file__}",
                                  formatter_class=RawTextHelpFormatter)
 
@@ -36,7 +41,7 @@ parser.add_argument("-v", "--verbose",
 parser.add_argument('program',
                     help="""blast program to use.\n\ndefault = blastn\n\navailable options:\n\t- blastn\n\t- blastx""",
                     default='blastn',
-                    choices=['blastn','blastx'])
+                    choices=['blastn','blastx', 'blastp'])
 
 parser.add_argument("database",
                     help="""database to query.\n\ndefault = nt\n\navailable options:\n\t- nt\n""",
@@ -51,9 +56,13 @@ parser.add_argument("-o", "-out", "--outputfile",
                     type=str)
 
 parser.add_argument("-e", "--evalue",
-                    help="""the minimal e-value """)
+                    type=int,
+                    help="""the minimal e-value given as int""")
 
-parser.add_argument("email",
+parser.add_argument("-ext", "--extention",
+                    help="""disable use of .xml fileextention""", action='store_true')
+
+parser.add_argument("email_address",
                     help="""your email address, this seems to be essential for the program to work (?!)""")
 
 # parse added arguments
@@ -72,6 +81,11 @@ def doBlast(verbose=False, **kwargs):
     """
 
     if verbose:
+        print('blast settings :')
+        for k, v in kwargs.items():
+            if k != 'sequence':
+                print(f'{k} : {v}')
+        print(30*"-")
         print(f"trying to BLAST \n{kwargs['sequence'][:20]}...")
     
     blast_result_handle = BLAST(**kwargs)
@@ -83,7 +97,7 @@ def doBlast(verbose=False, **kwargs):
     return blast_result_handle
                                    
 
-def saveXML_BLAST(blast_result_handle,filename="XML_BLAST_result", verbose=False):
+def saveXML_BLAST(blast_result_handle,filename=DEFAULT_BLAST_OUTPUTNAME, verbose=False):
     # open output file
     blast_file = open(filename, 'w')
 
@@ -101,13 +115,39 @@ def saveTABULAR_BLAST():
 
     """
 
+def parseBLAST(xml_file_name=DEFAULT_BLAST_OUTPUTNAME, verbose=False):
+
+    # TODO patch verbose
+    #
+    # take a filename, asuming it is a textfile with xml formatted blast
+    # results and output some standard information
+
+    # NCBIXML.parse method can only be used on a file handle, strings dont work
+    blast_file = open(xml_file_name, 'r')
+    blast_records = parseXML(blast_file)
+
+    
+    for blast_record in blast_records:
+        for alignment in blast_record.alignments:
+            for hsp in alignment.hsps:
+                if verbose:
+                    print('****Alignment****')
+                    print('sequence:', alignment.title)
+                    print('length:', alignment.length)
+                    print('score:', hsp.score)
+                    print('gaps:', hsp.gaps)
+                    print('e-value:', hsp.expect)
+                    print(hsp.query[0:90] +'...')
+                    print(hsp.match[0:90] +'...')
+                    print(hsp.sbjct[0:90] +'...')
+                    
 
 
 # digest user input
-args = parser.parse_args()
+args = parser.parse_args(["blastn","nt","ORFFOUND2.fa","milain.lambers@gmail.com","-o","blast_fromcommandline","-v","-e","1"])
 
 # set email
-Entrez.email = args.email
+Entrez.email = args.email_address
 
 if args.verbose:
     print("verbose is on")
@@ -117,8 +157,7 @@ if args.verbose:
 
 options = {'program': args.program,
            'database': args.database,
-           'sequence': open(args.query).read(),
-           'matrix_name': "BLOSUM62", }
+           'sequence': open(args.query).read()}
 
 if args.evalue:
     options['expect'] = args.evalue
@@ -127,18 +166,25 @@ blast_result_handle = doBlast(verbose=args.verbose, **options)
 
 
 if args.outputfile:
-    saveXML_BLAST(blast_result_handle, filename="XML_BLAST_result")
-    # open output file
-    blast_file = open(filename, 'w')
+    
+    if not ".xml" in args.outputfile and args.extention:
+        outputfile = args.outputfile+".xml"
+    else:
+        outputfile = args.outputfile
 
-    # write results ( xml-string )
-    blast_file.write(blast_result_handle.read())
-    blast_file.seek(0)
-    blast_file.close()
+    print(f"saving BLSAT output as {outputfile}")
+    
+    
 else:
-    print("no outputfile specified...! blast results lost in void!")
+    print(f"no outputfile specified...! blast results will be saved in XML file: {DEFAULT_BLAST_OUTPUTNAME}")
+    outputfile = DEFAULT_BLAST_OUTPUTNAME
+    
+    
+saveXML_BLAST(blast_result_handle, filename=outputfile, verbose=args.verbose)
 
 
+print("parsing BLAST for ya now")
+parseBLAST(xml_file_name=outputfile, verbose=args.verbose)
 
     
 

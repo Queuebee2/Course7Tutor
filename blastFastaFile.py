@@ -44,7 +44,7 @@ from Bio.Blast.NCBIWWW import qblast as BLAST
 from Bio.Blast.NCBIXML import parse as parseXML
 from Bio import Entrez
 
-
+DEFAULT_STORE_BLAST_CSV= "blast_results.csv"
 DEFAULT_BLAST_OUTPUTNAME = "blast_output.xml"
 
 parser = argparse.ArgumentParser(description=f"This is the helpsection of {__file__}",
@@ -103,7 +103,7 @@ def doBlast(verbose=False, **kwargs):
             if k != 'sequence':
                 print(f'{k} : {v}')
         print(30*"-")
-        print(f"trying to BLAST \n{kwargs['sequence'][:20]}...")
+        print(f"trying to BLAST \n{kwargs['sequence'][:25]}...")
     
     blast_result_handle = BLAST(**kwargs)
     
@@ -133,7 +133,10 @@ def saveTABULAR_BLAST():
     """
 
 def parseBLAST(xml_file_name=DEFAULT_BLAST_OUTPUTNAME, verbose=False):
+    """ THIS IS A GENERATOR!", yields blast results
 
+    IMPORTANT TODO: set max amount of yields or based on evalue (or both )
+    """
     # TODO patch verbose
     #
     # take a filename, asuming it is a textfile with xml formatted blast
@@ -147,19 +150,78 @@ def parseBLAST(xml_file_name=DEFAULT_BLAST_OUTPUTNAME, verbose=False):
     for blast_record in blast_records:
         for alignment in blast_record.alignments:
             for hsp in alignment.hsps:
-                if verbose:
-                    print('****Alignment****')
-                    print('sequence:', alignment.title)
-                    print('length:', alignment.length)
-                    print('score:', hsp.score)
-                    print('gaps:', hsp.gaps)
-                    print('e-value:', hsp.expect)
-                    print(hsp.query[0:90] +'...')
-                    print(hsp.match[0:90] +'...')
-                    print(hsp.sbjct[0:90] +'...')
+                yield [ alignment.title,
+                        alignment.length,
+                        hsp.score,
+                        hsp.expect]
+
+
+def storeBLAST(blast_result, storagefile=DEFAULT_STORE_BLAST_CSV):
+    with open(storagefile, 'a') as f:
+        line = "\t".join([str(i) for i in blast_result])
+        
+        f. write(line+"\n")
+        print(f' stored {line} ')
+    
                     
 
+def fastaReader(fastaFile):
+    """Generator helper function to
+    read and spit header-seq pairs one by one when iterated over"""
 
+    print(f'opening {fastaFile} to read fastas..')
+    with open(fastaFile, 'r') as f:
+
+            header = f.readline()
+            seq = ''
+
+            # generator loop
+            for line in f:
+                    if line.startswith(">"):
+                            yield header, seq
+                            header = line
+                            seq = ''
+                    else:
+                        seq += line
+
+            # yield last pair
+            yield header, seq
+
+
+
+def exists(identifier, col=0, delim='\t', threshold=1, storagefile=DEFAULT_STORE_BLAST_CSV):
+    """ identifier: an identifier for a sequence (e.g. a header)
+        threshold : the amount of times the identifier can appear
+        in the database ( a csv file for now )
+        doesn't check whether lines are unique (as of now)
+
+        the threshold was formerly based on the amount of blasts
+        done per header, but this version is intended for
+        one-blast-per sequence results
+    """
+    # this function can later be upgraded to query a database with
+    # sql
+
+    try:
+        with open(storagefile, 'r') as savefile:
+            count = 0
+            for line in savefile:
+                if line.split(delim)[col] == identifier:
+                    count += 1
+                if count >= threshold:
+                    return True
+                
+    except FileNotFoundError:
+        print("creating savefile")
+        with open(storagefile, 'w') as f:
+            f.write("header\ttitle\tlength\tscore\texpect\n")
+
+        return exists(identifier)
+    
+    # if the item exists less than 'threshold' times, return False
+    return False
+
+    
 # digest user input
 args = parser.parse_args(["blastn","nt","ORFFOUND2.fa","milain.lambers@gmail.com","-o","blast_fromcommandline","-v","-e","1"])
 
@@ -172,36 +234,49 @@ if args.verbose:
     print(args)
 
 
-options = {'program': args.program,
-           'database': args.database,
-           'sequence': open(args.query).read()}
-
-if args.evalue:
-    options['expect'] = args.evalue
-
-blast_result_handle = doBlast(verbose=args.verbose, **options)
+fastaSpitter = fastaReader(args.query)
+# TODO build a test to test if the fasta is right before actually starting
 
 
-if args.outputfile:
+# main BLAST loop, takes ages for big files.
+for header, sequence in fastaSpitter:
+
+    if exists(header.strip("\n")):
+        # skip headers we've already blasted
+        print(f'skipping {header[:35]}')
+        continue
     
-    if not ".xml" in args.outputfile and args.extention:
-        outputfile = args.outputfile+".xml"
+    options = {'program': args.program,
+               'database': args.database,
+               'sequence': header+sequence}
+
+    if args.evalue:
+        options['expect'] = args.evalue
+
+    blast_result_handle = doBlast(verbose=args.verbose, **options)
+
+
+    if args.outputfile:
+        
+        if not ".xml" in args.outputfile and args.extention:
+            outputfile = args.outputfile+".xml"
+        else:
+            outputfile = args.outputfile
+
+        print(f"saving BLSAT output as {outputfile}")
+        
+        
     else:
-        outputfile = args.outputfile
-
-    print(f"saving BLSAT output as {outputfile}")
-    
-    
-else:
-    print(f"no outputfile specified...! blast results will be saved in XML file: {DEFAULT_BLAST_OUTPUTNAME}")
-    outputfile = DEFAULT_BLAST_OUTPUTNAME
-    
-    
-saveXML_BLAST(blast_result_handle, filename=outputfile, verbose=args.verbose)
+        print(f"no outputfile specified...! blast results will be saved in XML file: {DEFAULT_BLAST_OUTPUTNAME}")
+        outputfile = DEFAULT_BLAST_OUTPUTNAME
+        
+        
+    saveXML_BLAST(blast_result_handle, filename=outputfile, verbose=args.verbose)
 
 
-print("parsing BLAST for ya now")
-parseBLAST(xml_file_name=outputfile, verbose=args.verbose)
+    print("parsing BLAST for ya now")
+    for blast_result in parseBLAST(xml_file_name=outputfile, verbose=args.verbose):
+        storeBLAST([header.strip("\n")]  + blast_result)
 
     
 

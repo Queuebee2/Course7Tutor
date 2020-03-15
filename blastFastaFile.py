@@ -17,7 +17,24 @@
 # https://github.com/peterjc/galaxy_blast/blob/master/tools/ncbi_blast_plus/blastxml_to_tabular.py
 # 
 #
+# TODO
+# - [ ] check validity of fastafile > throw error
+# - [ ] check usability before storing (eval, type of prot)
+# - [x] check existence in storage before blasting > else skip
+# - [x] store more information ( which seq, what header.. )
+#
 # 
+#
+#
+#
+# 
+#
+# 
+#
+# 
+#
+#
+
 
 
 import argparse

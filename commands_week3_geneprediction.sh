@@ -4,7 +4,7 @@
 
 # install ORFfinder
 ####################
-# wget ftp://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/ORFfinder/linux-i64/ORFfinder.g
+# wget ftp://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/ORFfinder/linux-i64/ORFfinder.gz
 # gunzip ORFfinder.gz
 ####################
 # thats it

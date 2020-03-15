@@ -4,7 +4,7 @@
 
 # install ORFfinder
 ####################
-# wget ftp://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/ORFfinder/linux-i64/ORFfinder.g
+# wget ftp://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/ORFfinder/linux-i64/ORFfinder.gz
 # gunzip ORFfinder.gz
 ####################
 # thats it
@@ -22,7 +22,7 @@ AUG_SPECIES="debaryomyces_hansenii"
 AUG_OUTPUT="augustus_output.gff"
 
 printf "running ORFfinder on $GENOME_FILE with minimum length $MIN_LENGTH\n"
-./ORFfinder -in "$GENOME_FILE" -ml "$MIN_LENGTH" -out "$ORF_FINDER_OUT"
+./ORFfinder -in "$GENOME_FILE" -ml "$MIN_LENGTH" -out "$ORF_FINDER_OUT" -outfmt 1
 
 printf "Creating l-mer table with repeatscout build_lmer \ninput sequence=$GENOME_FILE \noutput_file:=$LMER_OUTPUT\n"
 ./RepeatScout-1/build_lmer_table -sequence "$GENOME_FILE" -freq "$LMER_OUTPUT"

@@ -46,6 +46,10 @@ from Bio import Entrez
 
 DEFAULT_STORE_BLAST_CSV= "blast_results.csv"
 DEFAULT_BLAST_OUTPUTNAME = "blast_output.xml"
+DEFAULT_BLAST_PLACEHHOLDER = ['no result title',
+                        'no result length',
+                        'no result score',
+                        'no result expect']
 
 parser = argparse.ArgumentParser(description=f"This is the helpsection of {__file__}",
                                  formatter_class=RawTextHelpFormatter)
@@ -68,6 +72,8 @@ parser.add_argument("database",
 parser.add_argument("query",
                     help="""fastafile to query blast""")
 
+# TODO: This is the name of the XML file that one blast gets stored in and re-written
+# for every iteration, it should be the name of the CSV file so swap those two out
 parser.add_argument("-o", "-out", "--outputfile",
                     help="""the name of the output file""",
                     type=str)
@@ -279,9 +285,14 @@ for header, sequence in fastaSpitter:
 
 
     print("parsing BLAST for ya now")
+
+    got_results = False
     for blast_result in parseBLAST(xml_file_name=outputfile, verbose=args.verbose):
         storeBLAST([header.strip("\n")]  + blast_result)
+        got_results = True
 
-    
+    if not got_results:
+        print ("no results, archiving blast id {header} anyways")
+        storeBLAST([header.strip("\n")]  + DEFAULT_BLAST_PLACEHHOLDER)
 
 

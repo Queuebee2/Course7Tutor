@@ -244,15 +244,16 @@ fastaSpitter = fastaReader(args.query)
 # main BLAST loop, takes ages for big files.
 for header, sequence in fastaSpitter:
 
+
     if exists(header.strip("\n")):
         # skip headers we've already blasted
-        print(f'skipping {header[:35]}')
+        print(f'Already done this one! Skipping {header[:35]}')
         continue
-    
+
     options = {'program': args.program,
                'database': args.database,
                'sequence': header+sequence}
-
+    
     if args.evalue:
         options['expect'] = args.evalue
 
@@ -266,7 +267,7 @@ for header, sequence in fastaSpitter:
         else:
             outputfile = args.outputfile
 
-        print(f"saving BLSAT output as {outputfile}")
+        print(f"saving BLAST output as {outputfile}")
         
         
     else:

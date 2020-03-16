@@ -223,7 +223,10 @@ def exists(identifier, col=0, delim='\t', threshold=1, storagefile=DEFAULT_STORE
 
     
 # digest user input
-args = parser.parse_args(["blastn","nt","ORFFOUND2.fa","milain.lambers@gmail.com","-o","blast_fromcommandline","-v","-e","1"])
+# leave parser.parse_args() empty if ran from commandline to parse commandline args
+# otherwise pass a list of args like this
+# args = parser.parse_args(["blastn","nt","fastaFileToBlast","your@email.adress","-o","blastxmlFile","-v","-e","1"])
+args = parser.parse_args()
 
 # set email
 Entrez.email = args.email_address

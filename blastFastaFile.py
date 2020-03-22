@@ -46,6 +46,10 @@ from Bio import Entrez
 
 DEFAULT_STORE_BLAST_CSV= "blast_results.csv"
 DEFAULT_BLAST_OUTPUTNAME = "blast_output.xml"
+DEFAULT_BLAST_PLACEHHOLDER = ['no result title',
+                        'no result length',
+                        'no result score',
+                        'no result expect']
 
 parser = argparse.ArgumentParser(description=f"This is the helpsection of {__file__}",
                                  formatter_class=RawTextHelpFormatter)
@@ -68,6 +72,8 @@ parser.add_argument("database",
 parser.add_argument("query",
                     help="""fastafile to query blast""")
 
+# TODO: This is the name of the XML file that one blast gets stored in and re-written
+# for every iteration, it should be the name of the CSV file so swap those two out
 parser.add_argument("-o", "-out", "--outputfile",
                     help="""the name of the output file""",
                     type=str)
@@ -223,7 +229,10 @@ def exists(identifier, col=0, delim='\t', threshold=1, storagefile=DEFAULT_STORE
 
     
 # digest user input
-args = parser.parse_args(["blastn","nt","ORFFOUND2.fa","milain.lambers@gmail.com","-o","blast_fromcommandline","-v","-e","1"])
+# leave parser.parse_args() empty if ran from commandline to parse commandline args
+# otherwise pass a list of args like this
+# args = parser.parse_args(["blastn","nt","fastaFileToBlast","your@email.adress","-o","blastxmlFile","-v","-e","1"])
+args = parser.parse_args()
 
 # set email
 Entrez.email = args.email_address
@@ -241,15 +250,16 @@ fastaSpitter = fastaReader(args.query)
 # main BLAST loop, takes ages for big files.
 for header, sequence in fastaSpitter:
 
+
     if exists(header.strip("\n")):
         # skip headers we've already blasted
-        print(f'skipping {header[:35]}')
+        print(f'Already done this one! Skipping {header[:35]}')
         continue
-    
+
     options = {'program': args.program,
                'database': args.database,
                'sequence': header+sequence}
-
+    
     if args.evalue:
         options['expect'] = args.evalue
 
@@ -263,7 +273,7 @@ for header, sequence in fastaSpitter:
         else:
             outputfile = args.outputfile
 
-        print(f"saving BLSAT output as {outputfile}")
+        print(f"saving BLAST output as {outputfile}")
         
         
     else:
@@ -275,9 +285,14 @@ for header, sequence in fastaSpitter:
 
 
     print("parsing BLAST for ya now")
+
+    got_results = False
     for blast_result in parseBLAST(xml_file_name=outputfile, verbose=args.verbose):
         storeBLAST([header.strip("\n")]  + blast_result)
+        got_results = True
 
-    
+    if not got_results:
+        print ("no results, archiving blast id {header} anyways")
+        storeBLAST([header.strip("\n")]  + DEFAULT_BLAST_PLACEHHOLDER)
 
 
